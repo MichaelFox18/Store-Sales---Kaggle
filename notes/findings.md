@@ -77,6 +77,75 @@ cover the 16-day horizon, same params/features/holdout:
 - Caveat: single holdout, so only "recursive worst" and "direct_safe≈per_horizon" are
   robust; the 0.0001 ordering is noise. Confirm with rolling-origin CV later.
 
+### Calibration: local is optimistic, and the TEST WINDOW is the reason
+iter1 LightGBM: local single-holdout 0.428 → Kaggle LB **0.485** (+0.057). Ran rolling-
+origin CV (6×16d) to diagnose: folds = 0.428/0.405/0.390/0.401/0.415/0.444, mean 0.413.
+- The rolling MEAN (0.413) is MORE optimistic than fold 0 (0.428) — older mid-2017
+  windows are just easier. So the gap is NOT variance; the real test (Aug16-31) is
+  genuinely the hardest window (the true extrapolation frontier, entirely past training).
+- **Lesson:** for forecasting the next window, the most-recent holdout (fold 0) is the
+  honest metric; averaging older windows is rosy. More folds ≠ more honest here.
+- The fold0→LB offset (~0.06) >> fold noise (std 0.018): a real, roughly-stable
+  "extrapolation tax". Local still tracks RELATIVE gains → tune locally, expect
+  LB ≈ recent-local + ~0.06. Likely causes: shift-16 level goes stale under the
+  uptrend (under-prediction, RMSLE punishes it) + unmodeled holidays/events.
+- **Primary metric from now on = fold 0 (most recent 16d).** Next: iteration 2 features.
+
+### Iteration 2 (12 features at once) — a wash, and a discipline lesson
+Added holidays + store-meta + oil + trend together (23 feats vs 11). Rolling CV:
+fold 0 (primary) 0.428 → **0.446 (+0.018 WORSE)**; mean 0.413 → 0.416 (+0.003).
+- Batching broke "one group at a time": can't attribute, and the extra capacity
+  overfit the forward-most fold — the one that matters for the test.
+- Importances: store_nbr/family/dow/month/promo dominate (as in iter1). **Oil is
+  suspiciously high** — a single macro series, likely a time/regime proxy that overfits
+  forward. **Holidays + store-meta are LOW** importance, didn't earn their slots.
+- Fix: ablate each group alone (seeded for reproducibility), select on the 2 most
+  recent folds, keep only what improves fold 0.
+
+### Ablation: importance ≠ generalization value
+Each group added alone on BASE (seeded), marginal on fold 0:
++oil **+0.012 (worst)** · +recency2 +0.0046 · +holidays **−0.0029 (best)** · +storemeta −0.0017.
+- OIL hurts despite the highest importance of the new features — it's a time/regime
+  proxy that overfits forward (high split-count = heavy USE, not generalization). Dropped.
+- recency2 (rmean56 + growth) also hurts fold 0 — added overfitting, not signal. Dropped.
+- holidays + store-meta help modestly despite LOW importance. Kept.
+- **Lesson: feature importance measures how much a tree USES a feature, not whether it
+  GENERALIZES.** Judge features by held-out marginal effect on recent folds.
+- iter2 feature set = BASE + holidays + store-meta. Feature tweaks alone are only ~0.005,
+  so test bigger levers (full history, tweedie objective) before spending a submission.
+
+### Bigger levers: more data and tweedie — both flat-to-worse
+combo (BASE + holidays + store-meta), folds 0/1:
+- @2016 L2: fold0 **0.42378** (best; beats iter1 0.42751)
+- @2013 L2: fold0 0.46403 — **full history HURTS** (old lower-sales regime dilutes the
+  recent level; recency wins again, echoing Step A).
+- tweedie (default power 1.5): 0.4265 @2016 — no better than L2-on-log1p.
+- Lesson: "more data" is not free under a trend/regime shift; recent-only wins. Default
+  tweedie ≠ improvement here.
+- iter2 best so far = combo @2016 L2 (fold0 0.42378), only ~0.004 better than iter1.
+  Next lever before submitting: HP tuning (more trees + lower LR + early stopping).
+
+### HP tuning: lower LR + more trees + early stopping — the real iter2 gain
+combo features, folds 0/1 (early-stopped tree count):
+- lr0.05/63: 0.43059 (early stop spent 16d on internal val → worse than fixed-150 combo)
+- **lr0.03/63/reg: fold0 0.41765** (~557–688 trees) ← chosen (best fold 0)
+- lr0.02/127/reg: 0.41816 (best avg 0.41273)
+- **iter2 = combo + lr0.03 / ~600 trees / reg_lambda=1.** fold0 0.41765 vs iter1 0.42751
+  (−0.0099). submit_iter2.py refits on all 2016+ data through Aug15 at fixed 600 trees.
+  Expected LB ≈ 0.418 + ~0.06 tax ≈ 0.475–0.48.
+
+### ⚠ Local does NOT track the LB — the big lesson
+iter2 was BETTER locally (fold0 0.41765 < iter1 0.42751) but WORSE on Kaggle
+(**0.51756 > 0.48509**). The offset jumped +0.057 → +0.100 and the direction inverted.
+- Cause: we TUNED HP + SELECTED features on rolling June/July folds — interior, easy, and
+  the WRONG SEASON. More trees + more features overfit them; the late-August test got worse.
+  Simpler iter1 generalized better. We optimized the wrong objective.
+- README's nightmare realized: "if improving locally makes Kaggle worse, the validation is
+  broken — fix it here." STOP trusting interior-fold gains.
+- Fix hypothesis: the test is LATE AUGUST; validate on Aug 16–31 of PRIOR YEARS
+  (season-aligned). That should track the LB and expose iter2's overfit. → cv_august.py.
+- iter1 (simpler, 0.48509) is still our best LB. Bias toward simplicity + robust signals.
+
 ### Process
 Built validation BEFORE features (Phase 2 first). It immediately caught a
 plausible, math-backed idea that would have ~doubled our error. Measure, don't
