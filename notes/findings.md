@@ -146,6 +146,35 @@ iter2 was BETTER locally (fold0 0.41765 < iter1 0.42751) but WORSE on Kaggle
   (season-aligned). That should track the LB and expose iter2's overfit. → cv_august.py.
 - iter1 (simpler, 0.48509) is still our best LB. Bias toward simplicity + robust signals.
 
+### Season-aligned check: no single holdout tracks the LB; use multi-season agreement
+Evaluated iter1(simple) vs iter2(complex) on July2017 + Aug2014/15/16 holdouts:
+- July: iter2 better (−0.018). August: iter2 worse in 2/3 years (+0.041, +0.025), tie in 2016.
+  → matches the LB (iter2 worse). Validating on July (wrong season) misled us; complexity overfit.
+- BUT absolute Aug RMSLEs are 0.54–0.88 vs LB ~0.49–0.52: prior Augusts are a HARDER, different
+  regime (immature/sparse series, 2016 earthquake aftermath, oil economy). The 2017 test is the
+  newest/most stable regime — no historical window matches it absolutely.
+- **Strategy:** judge each change by MULTI-SEASON agreement (must help/hold on July AND August);
+  reject anything that helps one season and hurts another (that flags overfit, like iter2).
+  Bias hard to simplicity. iter1 (0.48509) stays our best LB until something beats it on both seasons.
+
+### Promotions: a robust, strongly-positive signal (iter3)
+BASE vs BASE+promo (trail7 / trail28 / store-day intensity), simple model, per holdout:
+Jul2017 −0.008 · Aug2016 −0.079 · Aug2015 **−0.295** · Aug2014 +0.067.
+- Helps July AND the two recent Augusts (closest to the test), often a lot. Only the
+  oldest (Aug2014) regresses — promo data is sparse/absent in 2013–14, an early-regime
+  artifact irrelevant to a 2016+-trained 2017 model.
+- Opposite of iter2: promo helps the RIGHT season. Adopted → iter3 = iter1-simple + promo,
+  trained 2016+. Promo is causal and known for the future — the soundest available lever.
+
+### iter3 WON: simplicity + multi-season discipline + promo → LB 0.43893 (best)
+Reverted iter2's complexity, kept the simple model, added only promo (multi-season validated).
+LB: 0.485 (iter1) → 0.518 (iter2) → **0.43893 (iter3)**. Local Jul-holdout→LB offset shrank
+to **+0.017** (was +0.057 / +0.100): simplicity + a causal, test-relevant signal generalizes
+far better. Promo helped the TEST window disproportionately (known future promos drive August
+sales the old model couldn't see). Methodology confirmed: bias to simplicity, validate across
+seasons, prefer causal signals. Next (iter4): multi-season-test more candidates — future
+promo (lead), holidays, store-meta — keep only what holds on July + recent Augusts.
+
 ### Process
 Built validation BEFORE features (Phase 2 first). It immediately caught a
 plausible, math-backed idea that would have ~doubled our error. Measure, don't

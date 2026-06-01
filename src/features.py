@@ -100,6 +100,17 @@ def add_recency(panel, shift, rolls=ROLL):
     return panel
 
 
+def add_promo(panel):
+    """Promotion features. onpromotion is known for ALL dates (incl. test), so trailing
+    sums and store-day intensity are leakage-safe -- promo is a known input, not the target.
+    Assumes panel is sorted by [store_nbr, family, date]."""
+    g = panel.groupby(["store_nbr", "family"], observed=True)["onpromotion"]
+    panel["promo_trail7"] = g.rolling(7).sum().reset_index(level=[0, 1], drop=True)
+    panel["promo_trail28"] = g.rolling(28).sum().reset_index(level=[0, 1], drop=True)
+    panel["store_promo_day"] = panel.groupby(["store_nbr", "date"], observed=True)["onpromotion"].transform("sum")
+    return panel
+
+
 if __name__ == "__main__":
     panel, last_train = build_panel()
     print(f"panel {len(panel):,} rows, last train {last_train.date()}")
