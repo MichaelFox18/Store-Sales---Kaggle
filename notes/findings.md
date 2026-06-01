@@ -175,6 +175,15 @@ sales the old model couldn't see). Methodology confirmed: bias to simplicity, va
 seasons, prefer causal signals. Next (iter4): multi-season-test more candidates — future
 promo (lead), holidays, store-meta — keep only what holds on July + recent Augusts.
 
+### iter4 ablation: only future-promo survives the multi-season guard
+On top of iter3 (base+promo), recent-season (Jul17+Aug15/16) avg delta:
+- **+promo_lead −0.0178 KEEP** (Aug2016 −0.028, Aug2015 −0.027, Aug2014 −0.072, Jul +0.001) —
+  knowing promos over the forecast window is highly predictive, esp. in August (test season).
+- +holidays +0.0078 **DROP** (hurts recent Augusts) — these are iter2's features; the guard
+  now shows they don't transfer to the test season (would have repeated iter2's regression).
+- +storemeta +0.0046 **DROP** (hurts recent Augusts).
+- iter4 = iter1-simple + promo (trail) + promo_lead (future). Holidays/store-meta excluded.
+
 ### Process
 Built validation BEFORE features (Phase 2 first). It immediately caught a
 plausible, math-backed idea that would have ~doubled our error. Measure, don't

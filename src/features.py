@@ -111,6 +111,17 @@ def add_promo(panel):
     return panel
 
 
+def add_promo_lead(panel, days=7):
+    """Future promo intensity: onpromotion summed over the next `days` (incl. today).
+    onpromotion is known for all dates (incl. test), so this is leakage-safe. Equivalent to
+    a trailing `days`-sum shifted back (days-1). Assumes panel sorted by [store_nbr, family, date]."""
+    g = panel.groupby(["store_nbr", "family"], observed=True)["onpromotion"]
+    trail = g.rolling(days).sum().reset_index(level=[0, 1], drop=True)
+    panel["_ptmp"] = trail
+    panel["promo_lead7"] = panel.groupby(["store_nbr", "family"], observed=True)["_ptmp"].shift(-(days - 1))
+    return panel.drop(columns="_ptmp")
+
+
 if __name__ == "__main__":
     panel, last_train = build_panel()
     print(f"panel {len(panel):,} rows, last train {last_train.date()}")
