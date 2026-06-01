@@ -9,7 +9,8 @@ not tuning. Local holdout = last 16 days of train (cutoff 2017-07-31). LB top �
 | 1 | 2026-06-01 | Global LightGBM, `direct_safe` (lag≥16) + promo/calendar/store/family | 0.42751 | **0.48509** | `submissions/iter1_lgbm_direct_safe.csv` |
 | 2 | 2026-06-01 | + holidays + store-meta, tuned (lr0.03 / ~600 trees / reg); oil & recency2 dropped | 0.41765 | **0.51756 ⚠ WORSE** | `submissions/iter2_lgbm_holidays_storemeta_tuned.csv` |
 | 3 | 2026-06-01 | iter1-simple + promotion features (trail7/28 + store-day intensity); 2016+ | Jul-holdout 0.42154 | **0.43893 ✓ BEST** | `submissions/iter3_lgbm_promo.csv` |
-| 4 | 2026-06-01 | iter3 + future-promo (promo_lead7); holidays/store-meta dropped (failed guard) | Jul 0.4223, Aug −0.027 | _pending_ | `submissions/iter4_lgbm_promo_lead.csv` |
+| 4 | 2026-06-01 | iter3 + future-promo (promo_lead7); holidays/store-meta dropped (failed guard) | Jul 0.4223, Aug −0.027 | 0.44188 (≈iter3) | `submissions/iter4_lgbm_promo_lead.csv` |
+| 5 | 2026-06-01 | FINAL ensemble: avg(3×iter3 seeds + iter4) in log space | ≤ single on ALL seasons (Aug2015 −0.015) | _pending_ | `submissions/iter5_ensemble_iter3x3_iter4.csv` |
 
 ### Iteration 1 — purpose: calibrate
 First real ML model and our first submission. Goal isn't a great score yet — it's to

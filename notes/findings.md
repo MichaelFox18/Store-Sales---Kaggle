@@ -184,6 +184,22 @@ On top of iter3 (base+promo), recent-season (Jul17+Aug15/16) avg delta:
 - +storemeta +0.0046 **DROP** (hurts recent Augusts).
 - iter4 = iter1-simple + promo (trail) + promo_lead (future). Holidays/store-meta excluded.
 
+### iter4 LB: future-promo didn't transfer (0.44188 ≈ iter3 0.43893)
+promo_lead helped the Aug holdouts (~−0.027) but slightly REGRESSED the LB (+0.003). Even
+multi-season-validated local gains don't always transfer — the 2017 test is its own regime.
+iter3 (0.43893) remains best. **Final (5th) = ENSEMBLE** (variance reduction): average several
+seeds of the iter3 config (± iter4 for diversity), in log space, validated multi-season.
+Low-risk last-mile gain rather than another feature bet that may not transfer.
+
+### iter5 (FINAL) = ensemble: ens_div beats single on EVERY season
+single / ens_seeds / ens_div (log-space average):
+- Jul2017 0.42154 / 0.42116 / **0.42087**   · Aug2016 0.72663 / 0.72885 / **0.71847**
+- Aug2015 0.54581 / 0.53579 / **0.53052**   · Aug2014 0.60283 / 0.63008 / **0.58690**
+- ens_div (3 iter3 seeds + iter4) is ≤ single on ALL four holdouts; pure seed-averaging
+  (ens_seeds) was mixed. The DIVERSITY from iter4 (promo_lead) makes the blend robustly
+  better even though iter4 alone scored slightly worse — classic ensemble effect.
+- Final submission = ens_div (submit_iter5.py). Most consistent multi-season signal yet.
+
 ### Process
 Built validation BEFORE features (Phase 2 first). It immediately caught a
 plausible, math-backed idea that would have ~doubled our error. Measure, don't
