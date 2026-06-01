@@ -1,0 +1,8 @@
+# Store Sales — time-series forecasting
+# Install with:  pip install -r requirements.txt
+pandas
+numpy
+matplotlib
+scikit-learn
+lightgbm
+jupyter
